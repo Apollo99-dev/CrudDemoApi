@@ -18,8 +18,15 @@ namespace CrudDemoApi.Controllers
         [HttpPost]
         public IActionResult Create(Product product)
         {
+            if (string.IsNullOrWhiteSpace(product.Name))
+                return BadRequest("Product name is required");
+
+            if (product.Price <= 0)
+                return BadRequest("Price must be greater than zero");
+
             _context.Products.Add(product);
             _context.SaveChanges();
+
             return Ok(product);
         }
 
@@ -40,7 +47,14 @@ namespace CrudDemoApi.Controllers
         public IActionResult Update(int id, Product updatedProduct)
         {
             var product = _context.Products.Find(id);
-            if (product == null) return NotFound();
+            if (product == null)
+                return NotFound();
+
+            if (string.IsNullOrWhiteSpace(updatedProduct.Name))
+                return BadRequest("Product name is required");
+
+            if (updatedProduct.Price <= 0)
+                return BadRequest("Price must be greater than zero");
 
             product.Name = updatedProduct.Name;
             product.Price = updatedProduct.Price;
