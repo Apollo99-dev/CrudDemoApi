@@ -73,6 +73,25 @@ namespace CrudDemoApi.Controllers
             _context.SaveChanges();
 
             return Ok("Deleted");
+
         }
+
+
+        [HttpGet("search")]
+        public IActionResult Search(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return BadRequest("Search term is required");
+
+            var results = _context.Products
+                .Where(p => p.Name.ToLower().Contains(name.ToLower()))
+                .ToList();
+
+            if (!results.Any())
+                return NotFound("No matching products found");
+
+            return Ok(results);
+        }
+
     }
 }
