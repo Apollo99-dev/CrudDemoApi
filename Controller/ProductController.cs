@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using CrudDemoApi.Data;
 using CrudDemoApi.Models;
+using CrudDemoApi.Services;
 
 namespace CrudDemoApi.Controllers
 {
@@ -8,13 +8,33 @@ namespace CrudDemoApi.Controllers
     [ApiController]
     public class ProductController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IProductService _service;
 
-        public ProductController(AppDbContext context)
+        public ProductController(IProductService service)
         {
-            _context = context;
+            _service = service;
         }
 
+        // GET: api/Product?pageNumber=1&pageSize=5
+        [HttpGet]
+        public IActionResult GetAll(int pageNumber = 1, int pageSize = 5)
+        {
+            var products = _service.GetAll(pageNumber, pageSize);
+            return Ok(products);
+        }
+
+        // GET: api/Product/5
+        [HttpGet("{id}")]
+        public IActionResult GetById(int id)
+        {
+            var product = _service.GetById(id);
+            if (product == null)
+                return NotFound("Product not found");
+
+            return Ok(product);
+        }
+
+        // POST: api/Product
         [HttpPost]
         public IActionResult Create(Product product)
         {
@@ -24,102 +44,36 @@ namespace CrudDemoApi.Controllers
             if (product.Price <= 0)
                 return BadRequest("Price must be greater than zero");
 
-            _context.Products.Add(product);
-            _context.SaveChanges();
-
-            return Ok(product);
+            var result = _service.Create(product);
+            return Ok(result);
         }
 
-        [HttpPost("bulk")]
-        public IActionResult BulkInsert(List<Product> products)
-        {
-            if (products == null || !products.Any())
-                return BadRequest("Product list is empty");
-
-            _context.Products.AddRange(products);
-            _context.SaveChanges();
-
-            return Ok(products);
-        }
-
-        [HttpGet]
-        public IActionResult GetAll(int pageNumber = 1, int pageSize = 5)
-        {
-            if (pageNumber <= 0 || pageSize <= 0)
-                return BadRequest("Invalid pagination parameters");
-
-            var totalRecords = _context.Products.Count();
-
-            var products = _context.Products
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
-                .ToList();
-
-            return Ok(new
-            {
-                TotalRecords = totalRecords,
-                PageNumber = pageNumber,
-                PageSize = pageSize,
-                Data = products
-            });
-        }
-
-        [HttpGet("{id}")]
-        public IActionResult GetById(int id)
-        {
-            var product = _context.Products.Find(id);
-            return product == null ? NotFound() : Ok(product);
-        }
-
+        // PUT: api/Product/5
         [HttpPut("{id}")]
         public IActionResult Update(int id, Product updatedProduct)
         {
-            var product = _context.Products.Find(id);
-            if (product == null)
-                return NotFound();
-
             if (string.IsNullOrWhiteSpace(updatedProduct.Name))
                 return BadRequest("Product name is required");
 
             if (updatedProduct.Price <= 0)
                 return BadRequest("Price must be greater than zero");
 
-            product.Name = updatedProduct.Name;
-            product.Price = updatedProduct.Price;
+            var product = _service.Update(id, updatedProduct);
+            if (product == null)
+                return NotFound("Product not found");
 
-            _context.SaveChanges();
             return Ok(product);
         }
 
+        // DELETE: api/Product/5
         [HttpDelete("{id}")]
         public IActionResult Delete(int id)
         {
-            var product = _context.Products.Find(id);
-            if (product == null) return NotFound();
+            var result = _service.Delete(id);
+            if (!result)
+                return NotFound("Product not found");
 
-            _context.Products.Remove(product);
-            _context.SaveChanges();
-
-            return Ok("Deleted");
-
+            return Ok("Product deleted successfully");
         }
-
-
-        [HttpGet("search")]
-        public IActionResult Search(string name)
-        {
-            if (string.IsNullOrWhiteSpace(name))
-                return BadRequest("Search term is required");
-
-            var results = _context.Products
-                .Where(p => p.Name.ToLower().Contains(name.ToLower()))
-                .ToList();
-
-            if (!results.Any())
-                return NotFound("No matching products found");
-
-            return Ok(results);
-        }
-
     }
 }
