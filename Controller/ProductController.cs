@@ -30,10 +30,38 @@ namespace CrudDemoApi.Controllers
             return Ok(product);
         }
 
-        [HttpGet]
-        public IActionResult GetAll()
+        [HttpPost("bulk")]
+        public IActionResult BulkInsert(List<Product> products)
         {
-            return Ok(_context.Products.ToList());
+            if (products == null || !products.Any())
+                return BadRequest("Product list is empty");
+
+            _context.Products.AddRange(products);
+            _context.SaveChanges();
+
+            return Ok(products);
+        }
+
+        [HttpGet]
+        public IActionResult GetAll(int pageNumber = 1, int pageSize = 5)
+        {
+            if (pageNumber <= 0 || pageSize <= 0)
+                return BadRequest("Invalid pagination parameters");
+
+            var totalRecords = _context.Products.Count();
+
+            var products = _context.Products
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            return Ok(new
+            {
+                TotalRecords = totalRecords,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                Data = products
+            });
         }
 
         [HttpGet("{id}")]
